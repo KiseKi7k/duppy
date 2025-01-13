@@ -51,12 +51,12 @@ impl PGBar {
     }
 }
 
-pub fn run(paths: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn run(paths: Vec<&str>) -> Result<(), Box<dyn std::error::Error>> {
     let dupe_map = search_and_mapdupe(&paths)?;
     let mut output = String::new();
 
     if dupe_map.len() > 0 {
-        let result = find_first_dupe(&paths, dupe_map)?;
+        let result = find_first_dupe(paths, dupe_map)?;
         output = format_result(result);
     } else {
         output.push_str("Not found any duplicate files");
@@ -68,7 +68,7 @@ pub fn run(paths: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn search_and_mapdupe(
-    paths: &Vec<String>,
+    paths: &Vec<&str>,
 ) -> Result<HashMap<String, Vec<String>>, Box<dyn std::error::Error>> {
     let mut set: HashSet<String> = HashSet::new();
     let mut dupe_map: HashMap<String, Vec<String>> = HashMap::new();
@@ -119,7 +119,7 @@ fn search_and_mapdupe(
 }
 
 pub fn find_first_dupe(
-    paths: &Vec<String>,
+    paths: Vec<&str>,
     mut dupe_map: HashMap<String, Vec<String>>,
 ) -> Result<Vec<Vec<String>>, Box<dyn std::error::Error>> {
     let mut dup_vec: Vec<Vec<String>> = Vec::new();
@@ -143,7 +143,7 @@ pub fn find_first_dupe(
         let pgbar_sub_msg_template = "Reading at: {}";
         let pgbar_sub = PGBar::create(file_counts as u64, pgbar_sub_msg_template, "");
 
-        for entry in WalkDir::new(path) {
+        for entry in pgbar_sub.progress_bar.wrap_iter(WalkDir::new(path).into_iter()) {
             let entry = entry?;
             let path = entry.path();
 
@@ -185,7 +185,7 @@ fn path_file_counts(path: &str) -> usize {
 }
 
 fn format_result(results: Vec<Vec<String>>) -> String {
-    let mut output = String::new();
+    let mut output = String::from("\n");
     for (i, result) in results.iter().enumerate() {
         let header = format!(
             "\n*---------------*\n{}. Found {} files duplicated.",
