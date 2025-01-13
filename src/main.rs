@@ -2,7 +2,7 @@ mod duppy;
 
 use std::time::Instant;
 use std::env;
-use duppy::find_duplicate_file;
+use duppy::run;
 
 fn build<'a>(args: &'a Vec<String>) -> Result<Vec<&'a str>, &'static str> {
 
@@ -16,16 +16,16 @@ fn build<'a>(args: &'a Vec<String>) -> Result<Vec<&'a str>, &'static str> {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args: Vec<String> = env::args().collect();
-    let config = build(&args);
-    println!("{:?}", args[1]);
-    println!("{:?}", config);
+    //let args: Vec<String> = env::args().collect();
+    //let config = build(&args);
+    //println!("{:?}", args[1]);
+    //println!("{:?}", config);
 
     let now = Instant::now();
 
-    //find_duplicate_file(r"H:\Download 2\ภาพ").unwrap_or_else(|e| {
-    //    panic!("{}", e);
-    //});
+    run(vec![r"H:\Download 2\ภาพ".to_string(), r"H:\Pics".to_string()]).unwrap_or_else(|e| {
+        panic!("{}", e);
+    });
 
     let elapsed = now.elapsed();
     println!("Elapsed: {:.2?}", elapsed);
