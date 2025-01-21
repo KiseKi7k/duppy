@@ -1,8 +1,9 @@
 use indicatif::{ProgressBar, ProgressFinish, ProgressStyle};
-use sha2::{Digest, Sha256};
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
-use std::fs;
+use std::fs::{self, File};
+use std::io::{BufReader, Read};
+use blake3::Hasher;
 use walkdir::WalkDir;
 
 pub struct PGBar {
@@ -100,8 +101,13 @@ fn search_and_mapdupe(
 
             if path.is_file() {
                 pgbar_sub.update_msg(vec![path.to_str().unwrap()]);
-                let data = fs::read(path)?;
-                let hash = hashing(data);
+                let hash = match read_and_hash(path.to_str().unwrap()) {
+                    Ok(hash) => hash,
+                    Err(_) => {
+                        println!("Erorr reading {}", path.display());
+                        continue;
+                    },
+                };
 
                 if set.contains(&hash) {
                     let str_path = path.to_str().unwrap().to_string();
@@ -149,8 +155,13 @@ pub fn find_first_dupe(
 
             if path.is_file() {
                 pgbar_sub.update_msg(vec![path.to_str().unwrap()]);
-                let data = fs::read(path)?;
-                let hash = hashing(data);
+                let hash = match read_and_hash(path.to_str().unwrap()) {
+                    Ok(hash) => hash,
+                    Err(_) => {
+                        println!("Erorr reading {}", path.display());
+                        continue;
+                    },
+                };
 
                 if let Some(vec) = dupe_map.get_mut(&hash) {
                     let str_path = path.to_str().unwrap().to_string();
@@ -169,11 +180,24 @@ pub fn find_first_dupe(
     Ok(dup_vec)
 }
 
-pub fn hashing(data: Vec<u8>) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(data);
+fn read_and_hash(path: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let buf_size = 1024 * 16;
+    let file = File::open(path)?;
+    let mut reader = BufReader::with_capacity(buf_size, file);
+    let mut buffer = vec![0; buf_size];
 
-    format!("{:x}", hasher.finalize())
+    let mut hasher = Hasher::new();
+
+    loop {
+        let byte_read = reader.read(&mut buffer)?;
+        if byte_read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..byte_read]);
+    }
+
+    let hashed = format!("{}", hasher.finalize());
+    Ok(hashed)
 }
 
 fn path_file_counts(path: &str) -> usize {
